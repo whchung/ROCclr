@@ -943,6 +943,9 @@ bool VirtualGPU::dispatchCounterAqlPacket(hsa_ext_amd_aql_pm4_packet_t* packet,
       break;
   }
 
+  // XXX test the new API in ROCR.
+  hsa_ven_amd_experiment_get_pm4(packet);
+
   return false;
 }
 
