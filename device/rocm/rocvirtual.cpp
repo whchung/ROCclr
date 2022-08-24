@@ -906,6 +906,10 @@ void VirtualGPU::dispatchBlockingWait() {
 // ================================================================================================
 bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking) {
+  // XXX test the new API in ROCR.
+  hsa_ext_amd_aql_pm4_packet_t pm4_packet;
+  hsa_ven_amd_experiment_get_pm4(&pm4_packet);
+
   dispatchBlockingWait();
 
   return dispatchGenericAqlPacket(packet, header, rest, blocking);
