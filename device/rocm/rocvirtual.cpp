@@ -909,7 +909,7 @@ bool VirtualGPU::dispatchAqlPacket(
   // XXX test the new API in ROCR.
   hsa_ext_amd_aql_pm4_packet_t pm4_packet;
   hsa_ven_amd_experiment_get_pm4(&pm4_packet);
-  printf("Launch AQL ESCAPE_TO_IB + PM4 IB + 4 PM4 NOP packets.\n");
+  printf("Launch AQL ESCAPE_TO_IB + PM4 IB + DIRECT_DISPATCH packets.\n");
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, blocking);
 
   dispatchBlockingWait();
