@@ -908,9 +908,16 @@ bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking) {
   // XXX test the new API in ROCR.
   hsa_ext_amd_aql_pm4_packet_t pm4_packet;
-  hsa_ven_amd_experiment_get_pm4(&pm4_packet);
+  void* pm4_a_buf;
+  void* pm4_b_buf;
+  void* pm4_c_buf;
+  void* pm4_isa_buf;
+  void* pm4_ib_buf;
+  hsa_ven_amd_experiment_allocate_pm4_buffers(&pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
+  hsa_ven_amd_experiment_get_pm4(&pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
   printf("Launch AQL ESCAPE_TO_IB + PM4 IB + DIRECT_DISPATCH packets.\n");
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, blocking);
+  hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
 
   dispatchBlockingWait();
 
@@ -948,9 +955,6 @@ bool VirtualGPU::dispatchCounterAqlPacket(hsa_ext_amd_aql_pm4_packet_t* packet,
       }
       break;
   }
-
-  // XXX test the new API in ROCR.
-  hsa_ven_amd_experiment_get_pm4(packet);
 
   return false;
 }
