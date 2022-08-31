@@ -906,7 +906,6 @@ void VirtualGPU::dispatchBlockingWait() {
 // ================================================================================================
 bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking) {
-  // XXX test the new API in ROCR.
   hsa_ext_amd_aql_pm4_packet_t pm4_packet;
   void* pm4_a_buf = nullptr;
   void* pm4_b_buf = nullptr;
@@ -917,10 +916,17 @@ bool VirtualGPU::dispatchAqlPacket(
   hsa_ven_amd_experiment_get_pm4(&pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
   printf("Launch AQL ESCAPE_TO_IB + PM4 IB + DIRECT_DISPATCH packets.\n");
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
-  printf("A[0]: %08X\n", reinterpret_cast<uint32_t*>(pm4_a_buf)[0]);
-  printf("B[0]: %08X\n", reinterpret_cast<uint32_t*>(pm4_b_buf)[0]);
-  printf("C[0]: %08X\n", reinterpret_cast<uint32_t*>(pm4_c_buf)[0]);
+  //for (uint32_t iter = 0; iter < 2; ++iter) {
+  //  printf("A[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_a_buf)[iter]);
+  //}
+  //for (uint32_t iter = 0; iter < 2; ++iter) {
+  //  printf("B[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_b_buf)[iter]);
+  //}
+  for (uint32_t iter = 0; iter < 16 * 1152 * 2 / 4; ++iter) {
+    printf("C[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_c_buf)[iter]);
+  }
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  printf("Launch user AQL packets.\n");
 
   dispatchBlockingWait();
 
