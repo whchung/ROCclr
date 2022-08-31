@@ -912,20 +912,31 @@ bool VirtualGPU::dispatchAqlPacket(
   void* pm4_c_buf = nullptr;
   void* pm4_isa_buf = nullptr;
   void* pm4_ib_buf = nullptr;
-  hsa_ven_amd_experiment_allocate_pm4_buffers(&pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
-  hsa_ven_amd_experiment_get_pm4(&pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
-  printf("Launch AQL ESCAPE_TO_IB + PM4 IB + DIRECT_DISPATCH packets.\n");
+
+  printf("Launch GEMM 16/1152/5120\n");
+  hsa_ven_amd_experiment_allocate_pm4_buffers(16, 1152, 5120, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
+  hsa_ven_amd_experiment_get_pm4(16, 1152, 5120, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
-  //for (uint32_t iter = 0; iter < 2; ++iter) {
-  //  printf("A[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_a_buf)[iter]);
-  //}
-  //for (uint32_t iter = 0; iter < 2; ++iter) {
-  //  printf("B[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_b_buf)[iter]);
-  //}
-  for (uint32_t iter = 0; iter < 16 * 1152 * 2 / 4; ++iter) {
-    printf("C[%d]: %08X\n", iter, reinterpret_cast<uint32_t*>(pm4_c_buf)[iter]);
-  }
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+
+  printf("Launch GEMM 16/5120/384\n");
+  hsa_ven_amd_experiment_allocate_pm4_buffers(16, 5120, 384, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
+  hsa_ven_amd_experiment_get_pm4(16, 5120, 384, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+
+  printf("Launch GEMM 16/1280/5120\n");
+  hsa_ven_amd_experiment_allocate_pm4_buffers(16, 1280, 5120, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
+  hsa_ven_amd_experiment_get_pm4(16, 1280, 5120, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+
+  printf("Launch GEMM 16/5120/1280\n");
+  hsa_ven_amd_experiment_allocate_pm4_buffers(16, 5120, 1280, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
+  hsa_ven_amd_experiment_get_pm4(16, 5120, 1280, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+
   printf("Launch user AQL packets.\n");
 
   dispatchBlockingWait();
