@@ -913,28 +913,41 @@ bool VirtualGPU::dispatchAqlPacket(
   void* pm4_isa_buf = nullptr;
   void* pm4_ib_buf = nullptr;
 
+  uint64_t t0, t1, t2;
   printf("Launch GEMM 16/1152/5120\n");
   hsa_ven_amd_experiment_allocate_pm4_buffers(16, 1152, 5120, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
   hsa_ven_amd_experiment_get_pm4(16, 1152, 5120, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  hsa_ven_amd_experiment_get_gpu_clock(&t0);
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_get_gpu_clock(&t1);
+  printf("GEMM time: %ld\n", t1 - t0);
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
 
   printf("Launch GEMM 16/5120/384\n");
   hsa_ven_amd_experiment_allocate_pm4_buffers(16, 5120, 384, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
   hsa_ven_amd_experiment_get_pm4(16, 5120, 384, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  hsa_ven_amd_experiment_get_gpu_clock(&t0);
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_get_gpu_clock(&t1);
+  printf("GEMM time: %ld\n", t1 - t0);
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
 
   printf("Launch GEMM 16/1280/5120\n");
   hsa_ven_amd_experiment_allocate_pm4_buffers(16, 1280, 5120, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
   hsa_ven_amd_experiment_get_pm4(16, 1280, 5120, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  hsa_ven_amd_experiment_get_gpu_clock(&t0);
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_get_gpu_clock(&t1);
+  printf("GEMM time: %ld\n", t1 - t0);
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
 
   printf("Launch GEMM 16/5120/1280\n");
   hsa_ven_amd_experiment_allocate_pm4_buffers(16, 5120, 1280, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
   hsa_ven_amd_experiment_get_pm4(16, 5120, 1280, &pm4_packet, pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
+  hsa_ven_amd_experiment_get_gpu_clock(&t0);
   dispatchGenericAqlPacket(&pm4_packet, 0, 0, true);
+  hsa_ven_amd_experiment_get_gpu_clock(&t1);
+  printf("GEMM time: %ld\n", t1 - t0);
   hsa_ven_amd_experiment_free_pm4_buffers(pm4_a_buf, pm4_b_buf, pm4_c_buf, pm4_isa_buf, pm4_ib_buf);
 
   printf("Launch user AQL packets.\n");
