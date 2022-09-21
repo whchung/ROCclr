@@ -819,6 +819,7 @@ bool VirtualGPU::dispatchGenericAqlPacket(
   if (timestamp_ != nullptr) {
     // Get active signal for current dispatch if profiling is necessary
     packet->completion_signal = Barriers().ActiveSignal(kInitSignalValueOne, timestamp_);
+    //printf("dispatchGenericAqlPacket set completion_signal 0x%zx\n", reinterpret_cast<hsa_kernel_dispatch_packet_t*>(packet)->completion_signal.handle);
   }
 
   // Make sure the slot is free for usage
@@ -871,7 +872,8 @@ bool VirtualGPU::dispatchGenericAqlPacket(
   }
 
   uint64_t t0, t1;
-  hsa_ven_amd_experiment_get_gpu_clock(&t0);
+  uint64_t c0, c1;
+  hsa_ven_amd_experiment_get_gpu_cpu_clock(&t0, &c0);
 
   //hsa_queue_store_write_index_release(gpu_queue_, index);
   hsa_signal_store_screlease(gpu_queue_->doorbell_signal, index - 1);
@@ -887,8 +889,11 @@ bool VirtualGPU::dispatchGenericAqlPacket(
       return false;
     }
   }
-  hsa_ven_amd_experiment_get_gpu_clock(&t1);
-  printf("GPU time(ns): %ld\n", t1 - t0);
+  hsa_ven_amd_experiment_get_gpu_cpu_clock(&t1, &c1);
+  printf("GPU time(tick): %ld\n", t1 - t0);
+  printf("CPU time(ns): %ld\n", c1 - c0);
+#define CounterToNanoSec(x) ((x) * 1000 / 25)
+  printf("GPU time(ns): %ld\n", CounterToNanoSec(t1 - t0));
 
   return true;
 }
@@ -908,6 +913,11 @@ void VirtualGPU::dispatchBlockingWait() {
   }
 }
 
+int num_pointers_captured;
+void* pointer_a;
+void* pointer_b;
+void* pointer_c;
+
 // ================================================================================================
 bool VirtualGPU::dispatchAqlPacket(
   hsa_kernel_dispatch_packet_t* packet, uint16_t header, uint16_t rest, bool blocking) {
@@ -918,7 +928,7 @@ bool VirtualGPU::dispatchAqlPacket(
   void* pm4_isa_buf = nullptr;
   void* pm4_ib_buf = nullptr;
 
-#define TEST_ITERATION (4)
+#define TEST_ITERATION (1)
   printf("Launch GEMM 16/1152/5120\n");
   hsa_ven_amd_experiment_allocate_pm4_buffers(16, 1152, 5120, &pm4_a_buf, &pm4_b_buf, &pm4_c_buf, &pm4_isa_buf, &pm4_ib_buf);
   for (int iter = 0; iter < TEST_ITERATION; ++iter) {
@@ -2755,6 +2765,37 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
 
   const amd::KernelSignature& signature = kernel.signature();
   const amd::KernelParameters& kernelParams = kernel.parameters();
+
+  // try capture user kernel arguments
+  printf("number of kernel parameters: %d\n", signature.numParameters());
+
+  num_pointers_captured = 0;
+
+  for (int i = 0; i < signature.numParameters(); ++i) {
+    const amd::KernelParameterDescriptor& desc = signature.at(i);
+    if (desc.type_ == T_POINTER) {
+      printf("type: T_POINTER size: %ld offset %ld ", desc.size_, desc.offset_);
+      printf("value: %08X%08X\n",
+        reinterpret_cast<uint32_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4 + 1]),
+        reinterpret_cast<uint32_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4]));
+      if (num_pointers_captured == 0) {
+        pointer_a = reinterpret_cast<void*>(static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4 + 1]) << 32 |
+			                    static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4]));
+	++num_pointers_captured;
+	printf("set pointer a\n");
+      } else if (num_pointers_captured == 1) {
+        pointer_b = reinterpret_cast<void*>(static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4 + 1]) << 32 |
+			                    static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4]));
+	++num_pointers_captured;
+	printf("set pointer b\n");
+      } else if (num_pointers_captured == 2) {
+        pointer_c = reinterpret_cast<void*>(static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4 + 1]) << 32 |
+			                    static_cast<uint64_t>(reinterpret_cast<uint32_t*>(kernelParams.values())[desc.offset_ / 4]));
+	++num_pointers_captured;
+	printf("set pointer c\n");
+      }
+    }
+  }
 
   size_t newOffset[3] = {0, 0, 0};
   size_t newGlobalSize[3] = {0, 0, 0};
