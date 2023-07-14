@@ -2784,19 +2784,22 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
 
     bool submit = true;
     static bool tracked = false;
+    char *enable_fusion = getenv("AMD_KERNEL_FUSION");
     char *host_kernel_name = getenv("AMD_KERNEL_FUSION_HOST");
     char *guest_kernel_name = getenv("AMD_KERNEL_FUSION_GUEST");
-    if (host_kernel_name && guest_kernel_name) {
-      if (!gpuKernel.name().compare(host_kernel_name)) {
-        submit = false;
-      } else if (gpuKernel.name().compare(guest_kernel_name) == 0) {
-        submit = true;
+    if (enable_fusion) {
+      if (host_kernel_name && guest_kernel_name) {
+        if (!gpuKernel.name().compare(host_kernel_name)) {
+          submit = false;
+        } else if (gpuKernel.name().compare(guest_kernel_name) == 0) {
+          submit = true;
+        }
       }
+      ClPrint(amd::LOG_INFO, amd::LOG_KERN, "number of parameters: %d", signature.numParameters());
+      ClPrint(amd::LOG_INFO, amd::LOG_KERN, "number of all parameters: %d", signature.numParametersAll());
+      ClPrint(amd::LOG_INFO, amd::LOG_KERN, "parameters: %p", parameters);
+      ClPrint(amd::LOG_INFO, amd::LOG_KERN, "kernelParams.values_: %p", kernelParams.values());
     }
-    ClPrint(amd::LOG_INFO, amd::LOG_KERN, "number of parameters: %d", signature.numParameters());
-    ClPrint(amd::LOG_INFO, amd::LOG_KERN, "number of all parameters: %d", signature.numParametersAll());
-    ClPrint(amd::LOG_INFO, amd::LOG_KERN, "parameters: %p", parameters);
-    ClPrint(amd::LOG_INFO, amd::LOG_KERN, "kernelParams.values_: %p", kernelParams.values());
 
     // Check if runtime has to setup hidden arguments
     for (uint32_t i = signature.numParameters(); i < signature.numParametersAll(); ++i) {
@@ -2980,7 +2983,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
     address argBuffer = hidden_arguments;
     // Find all parameters for the current kernel
     if (!kernel.parameters().deviceKernelArgs() || gpuKernel.isInternalKernel()) {
-      if (tracked && submit) {
+      if (enable_fusion && tracked && submit) {
         ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Allocate fused kernarg = %d", tracked_kernarg_size + gpuKernel.KernargSegmentByteSize());
 
         // Allocate buffer to hold fused kernel arguments
@@ -2991,7 +2994,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
         memcpy(argBuffer, tracked_kernarg, tracked_kernarg_size);
 
         // Load all kernel arguments from the current kernel
-        memcpy(argBuffer + trakced_kernarg_size, parameters, gpuKernel.KernargSegmentByteSize());
+        memcpy(argBuffer + tracked_kernarg_size, parameters, gpuKernel.KernargSegmentByteSize());
 
       } else {
         // retrieve kernarg segment size
@@ -3061,30 +3064,39 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
     }
 
     // Dispatch the packet
-    if (submit) {
-      if (tracked) {
-        dispatchPacket.kernel_object = tracked_kernel_object;
+    if (enable_fusion) {
+      if (submit) {
+        if (tracked) {
+          dispatchPacket.kernel_object = tracked_kernel_object;
 
-        tracked = false;
-        tracked_kernel_object = 0UL;
-        tracked_kernarg = nullptr;
+          tracked = false;
+          tracked_kernel_object = 0UL;
+          tracked_kernarg = nullptr;
+        }
+
+        if (!dispatchAqlPacket(
+                &dispatchPacket, aqlHeaderWithOrder,
+                (sizes.dimensions() << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS),
+                GPU_FLUSH_ON_EXECUTION)) {
+          return false;
+        }
+      } else {
+        if (tracked == false) {
+          tracked = true;
+          ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernel code = %p\n", gpuKernel.KernelCodeHandle());
+          ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernarg pointer = %p\n", argBuffer);
+          ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernarg size = %d\n", gpuKernel.KernargSegmentByteSize());
+          tracked_kernel_object = gpuKernel.KernelCodeHandle();
+          tracked_kernarg = argBuffer;
+          tracked_kernarg_size = gpuKernel.KernargSegmentByteSize();
+        }
       }
-
+    } else {
       if (!dispatchAqlPacket(
               &dispatchPacket, aqlHeaderWithOrder,
               (sizes.dimensions() << HSA_KERNEL_DISPATCH_PACKET_SETUP_DIMENSIONS),
               GPU_FLUSH_ON_EXECUTION)) {
         return false;
-      }
-    } else {
-      if (tracked == false) {
-        tracked = true;
-        ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernel code = %p\n", gpuKernel.KernelCodeHandle());
-        ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernarg pointer = %p\n", argBuffer);
-        ClPrint(amd::LOG_INFO, amd::LOG_KERN, "Tracking kernarg size = %d\n", gpuKernel.KernargSegmentByteSize());
-        tracked_kernel_object = gpuKernel.KernelCodeHandle();
-        tracked_kernarg = argBuffer;
-        tracked_kernarg_size = gpuKernel.KernargSegmentByteSize();
       }
     }
   }
