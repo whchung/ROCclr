@@ -2763,6 +2763,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
   static uint64_t tracked_kernel_object = 0UL;
   static address tracked_kernarg = nullptr;
   static uint32_t tracked_kernarg_size = 0;
+  static hsa_kernel_dispatch_packet_t tracked_dispatch_packet;
 
   for (int j = 0; j < iteration; j++) {
     // Reset global size for dimension dim if split is needed
@@ -3072,6 +3073,13 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
           tracked = false;
           tracked_kernel_object = 0UL;
           tracked_kernarg = nullptr;
+
+          dispatchPacket.grid_size_x  = tracked_dispatch_packet.grid_size_x;
+          dispatchPacket.grid_size_y  = tracked_dispatch_packet.grid_size_y;
+          dispatchPacket.grid_size_z  = tracked_dispatch_packet.grid_size_z;
+          dispatchPacket.workgroup_size_x  = tracked_dispatch_packet.workgroup_size_x;
+          dispatchPacket.workgroup_size_y  = tracked_dispatch_packet.workgroup_size_y;
+          dispatchPacket.workgroup_size_z  = tracked_dispatch_packet.workgroup_size_z;
         }
 
         if (!dispatchAqlPacket(
@@ -3089,6 +3097,7 @@ bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
           tracked_kernel_object = gpuKernel.KernelCodeHandle();
           tracked_kernarg = argBuffer;
           tracked_kernarg_size = gpuKernel.KernargSegmentByteSize();
+          memcpy(&tracked_dispatch_packet, &dispatchPacket, sizeof(hsa_kernel_dispatch_packet_t));
         }
       }
     } else {
