@@ -2708,8 +2708,26 @@ bool VirtualGPU::createVirtualQueue(uint deviceQueueSize)
 
 // ================================================================================================
 bool VirtualGPU::submitKernelInternal(const amd::NDRangeContainer& sizes,
-    const amd::Kernel& kernel, const_address parameters, void* eventHandle,
+    const amd::Kernel& userKernel, const_address parameters, void* eventHandle,
     uint32_t sharedMemBytes, amd::NDRangeKernelCommand* vcmd) {
+
+  amd::Kernel* substitutionKernel{nullptr};
+  std::string userKernelName = userKernel.name();
+  userKernelName.erase(std::find(userKernelName.begin(), userKernelName.end(), '\0'), userKernelName.end());
+  if (substitutionTable_.find(userKernelName) != substitutionTable_.end()) {
+    auto& substitutionSymbolName = substitutionTable_[userKernelName];
+    substitutionKernel = externalSymbolTable_.at(substitutionSymbolName);
+  }
+
+  if (substitutionKernel != nullptr) {
+    ClPrint(amd::LOG_INFO,
+            amd::LOG_KERN,
+            "substituting a call to `%s` with `%s`",
+            userKernelName.c_str(),
+            substitutionKernel->name().c_str());
+  }
+  const amd::Kernel& kernel = substitutionKernel == nullptr ? userKernel : *substitutionKernel;
+
   device::Kernel* devKernel = const_cast<device::Kernel*>(kernel.getDeviceKernel(dev()));
   Kernel& gpuKernel = static_cast<Kernel&>(*devKernel);
   size_t ldsUsage = gpuKernel.WorkgroupGroupSegmentByteSize();

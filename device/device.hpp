@@ -1268,6 +1268,14 @@ class VirtualDevice : public amd::HeapObject {
   //! Returns fence state of the VirtualGPU
   virtual bool isFenceDirty() const = 0;
 
+  void setExternalSymbolTable(std::unordered_map<std::string, amd::Kernel*> table) {
+    externalSymbolTable_ = table;
+  }
+
+  void setSubstitutionTable(std::unordered_map<std::string, std::string> table) {
+    substitutionTable_ = table;
+  }
+
  private:
   //! Disable default copy constructor
   VirtualDevice& operator=(const VirtualDevice&);
@@ -1283,6 +1291,8 @@ class VirtualDevice : public amd::HeapObject {
 
   amd::Monitor execution_;  //!< Lock to serialise access to all device objects
   uint index_;              //!< The virtual device unique index
+  std::unordered_map<std::string, amd::Kernel*> externalSymbolTable_{};
+  std::unordered_map<std::string, std::string> substitutionTable_{};
 };
 
 }  // namespace device
